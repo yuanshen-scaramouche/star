@@ -16,7 +16,17 @@
    cd data/plugins
    git clone https://github.com/yuanshen-scaramouche/star anti_repeat
 
+2. 指令
+```
+1. lxhelp 或 拦截帮助 -> 获得拦截插件帮助信息
+2. set_cooldown 或 冷却设置 -> 调整冷却时间为 x.x 浮点数
+3. 传入指令前缀 或 指令前缀 或 指令前缀传入 -> 传入指令前缀
+4. 设置警告 -> 设置多次发送消息给机器人时的提示信息
+```   
+
 
 # 支持
 
+- QQ加群：1042904301
+- QQ号：510160951
 - [插件开发文档](https://docs.astrbot.app/dev/star/plugin-new.html)
