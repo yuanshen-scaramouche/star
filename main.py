@@ -77,12 +77,12 @@ class AntiRepeatPlugin(Star):
             当同一用户在 {self.cooldown_seconds}s 内发送两次相同内容，将自动拦截后续指令。
 
             [指令]
-            注意：除帮助指令外需要添加lx为主指令。（暂时未实现仅拦截指令）
+            注意：除帮助指令外需要添加lx为主指令。
             当前警告语句：{self.WarnMessage}
 
             1. lxhelp 或 拦截帮助 -> 获得拦截插件帮助信息
             2. set_cooldown 或 冷却设置 -> 调整冷却时间 (当前: {self.cooldown_seconds}s)
-            3. 传入指令前缀 / 删除指令前缀 -> 管理触发拦截的指令头
+            3. 传入指令前缀 / 删除指令前缀 -> 管理触发拦截的指令头(本指令已废弃，无需使用此指令)
             4. 设置警告 -> 设置触发拦截时的回复内容
 
             """).strip()
@@ -147,9 +147,7 @@ class AntiRepeatPlugin(Star):
         if "lxhelp" in content or "拦截帮助" in content:
             return
 
-        # 检查是否包含唤醒词（还未实现）
-        #if not content.startswith(tuple(self.cmd)):
-        #   return  # 只要开头不是这些符号中的任何一个，直接退出
+        if not event.is_at_or_wake_command: return
 
         user_id = event.get_sender_id()
         key = f"{user_id}:{content}"
@@ -198,3 +196,9 @@ class AntiRepeatPlugin(Star):
             k: v for k, v in self.history.items()
             if current_time - v['time'] < self.cooldown_seconds
         }
+
+
+"""标题：@悲伤玉米糊ovo 我恨自己是个姐姐控。一有事就喊姐姐，闹脾气也要在姐姐面前装的可爱，跟姐姐说话一定是柔声细语，受一点伤我都要委屈找姐姐，天天围着姐姐转，窝在姐姐怀里撒娇。想姐姐等姐姐爱姐姐，姐姐好美，吃饭想姐姐，睡觉想姐姐，洗澡想姐姐，干什么都想姐姐，太喜欢姐姐了，眼泪流干也要喜欢
+作者：moyidian(uid:dym3aq3w8z31)
+发布时间：2026-01-18
+原始链接：https://www.douyin.com/note/7596716170209329262"""
