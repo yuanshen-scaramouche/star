@@ -19,7 +19,7 @@ class AntiRepeatPlugin(Star):
         self.cooldown_seconds = 3.0
         self.cmd = ['/']  # 默认唤醒前缀
         self.WarnMessage = "核心逻辑混乱，不要再发啦！"  # 警告消息
-
+        self.GJC = []
         self.config_file = config_file
 
         # 加载配置
@@ -42,6 +42,7 @@ class AntiRepeatPlugin(Star):
                     self.cmd = data.get("cmd", self.cmd)
                     self.cooldown_seconds = data.get("cooldown_seconds", self.cooldown_seconds)
                     self.WarnMessage = data.get("warn_message", self.WarnMessage)
+                    self.GJC = data.get("gjc", self.GJC)
                     print(f"成功读取配置: CD={self.cooldown_seconds}s, 前缀={self.cmd}")
 
             except Exception as e:
@@ -56,7 +57,8 @@ class AntiRepeatPlugin(Star):
             data = {
                 "cmd": self.cmd,
                 "cooldown_seconds": self.cooldown_seconds,
-                "warn_message": self.WarnMessage
+                "warn_message": self.WarnMessage,
+                "gjc": self.GJC
             }
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 # indent=4 可以让生成的 json 文件带缩进，方便阅读
@@ -84,6 +86,7 @@ class AntiRepeatPlugin(Star):
             2. set_cooldown 或 冷却设置 -> 调整冷却时间 (当前: {self.cooldown_seconds}s)
             3. 传入指令前缀 / 删除指令前缀 -> 管理触发拦截的指令头(本指令已废弃，无需使用此指令)
             4. 设置警告 -> 设置触发拦截时的回复内容
+            5. 设置关键词 -> 设置关键词（用于关键词触发插件拦截）
 
             """).strip()
         yield event.plain_result(help_message)
@@ -135,6 +138,13 @@ class AntiRepeatPlugin(Star):
         self.save_config()  # 保存配置
         yield event.plain_result(f'警告语句已更新并保存：{self.WarnMessage}')
 
+    @lx.command('设置关键词')
+    @filter.permission_type(PermissionType.ADMIN)
+    async def set_warnmessage(self, event: AstrMessageEvent, gjc: str):
+        self.GJC = gjc
+        self.save_config()  # 保存配置
+        yield event.plain_result(f'已设置关键词并保存：{self.GJC}')
+
     # === 事件监听部分 ===
     @filter.event_message_type(EventMessageType.ALL, priority=10)
     async def intercept_repeats(self, event: AstrMessageEvent):
@@ -143,11 +153,8 @@ class AntiRepeatPlugin(Star):
         if not content:
             return
 
-        # 白名单：帮助指令不拦截
-        if "lxhelp" in content or "拦截帮助" in content:
+        if not event.is_at_or_wake_command:
             return
-
-        if not event.is_at_or_wake_command: return
 
         user_id = event.get_sender_id()
         key = f"{user_id}:{content}"
@@ -185,6 +192,43 @@ class AntiRepeatPlugin(Star):
             'warned': False
         }
 
+        # 新增：检查 self.GLC 中的词汇是否在内容中
+        if any(item in content for item in self.GLC):
+            user_id = event.get_sender_id()
+            key = f"{user_id}:{content}"
+            current_time = time.time()
+
+            # 2. 检查冷却
+            if key in self.history:
+                record = self.history[key]
+                last_time = record['time']
+                has_warned = record['warned']
+
+                if current_time - last_time < self.cooldown_seconds:
+                    # === 触发拦截 ===
+                    # 只有在还没警告过的情况下，才发送警告
+                    if not has_warned:
+                        message_chain = MessageChain().message(self.WarnMessage)
+                        await self.context.send_message(
+                            event.unified_msg_origin,
+                            message_chain
+                        )
+                        # 标记该记录为“已警告”
+                        self.history[key]['warned'] = True
+
+                    # 无论是否警告过，只要在冷却内且触发了拦截，都更新时间防止无限刷
+                    # 如果你不希望刷屏延长冷却，可以注释掉下面这行
+                    self.history[key]['time'] = current_time
+
+                    # 核心：停止事件传播
+                    event.stop_event()
+                    return
+                
+                # 3. 更新/新建记录 (重置 warned 状态)
+                self.history[key] = {
+                    'time': current_time,
+                    'warned': False
+                }
         # 简单清理
         if len(self.history) > 1000:
             self.cleanup_history()
